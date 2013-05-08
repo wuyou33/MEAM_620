@@ -1,0 +1,143 @@
+
+% ********* MEAM 620 QUADROTOR SIMULATION ************************
+% ********** CONTROLLER ETC **************************************
+close all
+clear all
+
+%trajectory to test
+trajhandle = @circle; %FILL THIS IN
+
+%end point on trajectory for stopping, tolerances
+stop = [1 0 0]; %FILL THIS IN
+pos_tol = 0.01;
+vel_tol = 0.01;
+
+%max time 
+time_tol = 30;
+
+%parameters for simulation
+params = nanoplus();
+
+%environment
+environment_file = 'emptyenvironment.txt';
+
+%controller
+controlhandle = @controller;%FILL THIS IN
+
+% ************ ENVIRONMENT ***************************************
+fprintf('Loading environment...\n')
+environment = load(environment_file);
+p1 = [];
+p2 = [];
+c  = [];
+for k = 1:size(environment,1)
+    p1 = [p1 environment(k,1:3)'];
+    p2 = [p2 environment(k,4:6)'];
+    c  = [c  environment(k,7:9)'];
+end;
+
+% **************************** FIGURES ****************************
+
+fprintf('Initializing figures...\n')
+% Environment figure
+h2 = figure;
+if(~isempty(p1))
+block_list_plot(h2, p1, p2, c);
+end
+hold on;
+axis equal;
+grid on;
+view(3);
+%h2p = get(h1,'Position');
+%h2p(1) = h2p(1) - 500;
+%h2p(3) = 400; 
+%h2p(4) = 400;
+%set(h2,'Position',h2p);
+set(gcf,'Renderer','OpenGL');
+hold off;
+drawnow;
+
+% *****************INITIAL CONDITIONS **************************
+fprintf('Setting initial conditions...\n')
+x0     = zeros(13,1);
+phi0   = 0.0; 
+theta0 = 0.0; 
+psi0   = 0.0;
+Rot0   = RPYtoRot_ZXY(phi0,theta0,psi0);
+Quat0  = RotToQuat(Rot0);
+
+[pos] = trajhandle(0);
+
+x0(1)  = pos(1);      %x
+x0(2)  = pos(2);      %y
+x0(3)  = pos(3);      %z
+x0(4)  = 0;        %xdot
+x0(5)  = 0;        %ydot
+x0(6)  = 0;        %zdot
+x0(7)  = Quat0(1); %qw
+x0(8)  = Quat0(2); %qx
+x0(9)  = Quat0(3); %qy
+x0(10) = Quat0(4); %qz
+x0(11) = 0;        %p
+x0(12) = 0;        %q
+x0(13) = 0;        %r
+starttime = 0;         % start of simulation in seconds
+tstep     = 0.01;      % this determines the time step at which the solution is given
+cstep     = 0.05;      % image capture time interval
+time      = starttime; % current time
+x         = x0;        % state
+
+xtraj = [];
+ttraj = [];
+
+
+% **************** RUN SIMULATION ****************************
+fprintf('Simulation Running....')
+
+while (1)
+    % Run simulation and plot
+    tic;
+    timeint = time:tstep:time+cstep;
+    [tsave,xsave] = ode45(@(t,s) quadEOM(t, s, controlhandle, trajhandle, params), timeint, x);
+    
+    
+    
+    x    = xsave(end,:)';
+    xtraj = [xtraj; xsave];
+    ttraj = [ttraj; tsave];
+    time = time + cstep;    
+
+    figure(h2);
+    hold on;
+    plot3(x(1),x(2),x(3),'b.','Markersize',10);
+    hold off;
+    
+    t = toc;
+
+    %%%%%%%%%%%%%%%%%%
+    [pos_c phi_c phi_d_c vel_c acc_c vects_c] = trajhandle(time);
+    hold on;
+    plot3(pos_c(1), pos_c(2), pos_c(3), 'or');
+    %%%%%%%%%%%%%%%%%%%%
+    drawnow;
+    
+    % Pause to make real-time
+    if (t < cstep)
+        pause(cstep-t);     
+    end;
+    
+    % Termination criteria 
+    if (norm(x(1:3) - stop') < pos_tol && norm(x(4:6)) < vel_tol) || time >= time_tol
+        %trajectory(sample_cnt,:) = xsave(end,:);
+        break;
+    end;
+    
+    norm(x(1:3) - pos_c')
+    
+end;
+
+
+fprintf('finished\n')
+
+
+

@@ -1,0 +1,123 @@
+\section{Analysis}
+\subsection{Controller}
+
+As in phase 2, because all of the motions of the quadrotor are sufficiently close to a hover state (e.g., the roll and the pitch less than or equal to $\frac{\pi}{12}$) we can use a linear approximation of the quadrotor’s command desired accelerations and roll and pitch angles.
+
+Starting with Newton's Equations of Motion: 
+
+\begin{equation}
+m \ddot r=
+\begin{bmatrix}
+0 \\ 0 \\ -mg
+\end{bmatrix} + R
+\begin{bmatrix}
+0 \\ 0 \\ \sum F
+\end{bmatrix}
+\end{equation}
+
+where m is the mass, $\ddot r$ is the acceleration vector, g is gravity, R is the rotation matrix from the normal propeller frame into the world frame, and $\sum F$ is the sum of the forces from each propeller. 
+
+%The angular acceleration is given %by the Euler equations:
+
+%\begin{equation}
+%I \begin{bmatrix}
+%\dot p \\ \dot q \\ \dot r
+%\end{bmatrix} = 
+%\begin{bmatrix}
+%0 \\ 0 \\ -mg
+%\end{bmatrix} + R
+%\begin{bmatrix}
+%0 \\ 0 \\ \sum F
+%\end{bmatrix}
+%\end{equation}
+
+Linearizing (1) this we get:
+
+\begin{equation}
+\ddot r =
+\begin{bmatrix}
+g(\bigtriangleup \theta \cos \psi_0 + \bigtriangleup \phi \sin \psi_0 ) \\ 
+g(\bigtriangleup \theta \sin \psi_0 - \bigtriangleup \phi \cos \psi_0 ) \\ 
+\frac{1}{m}u_1 - g
+\end{bmatrix}
+\end{equation}
+
+Because of the hover approximation we can assume that $\bigtriangleup \theta \approx \theta - \theta_0$ and $ \bigtriangleup \phi \approx \phi - \phi_0 $, and therefore that
+
+\begin{equation}
+\begin{matrix}
+\ddot r_1 \\ \ddot r_2  \\ \ddot r_3 
+\end{matrix}
+\begin{matrix}
+~=~ \\ ~=~  \\ ~=~ 
+\end{matrix}
+\begin{matrix}
+g(\theta^{des} \cos \psi_0 + \phi^{des} \sin \psi_0 ) \\ 
+g(\theta^{des} \sin \psi_0 - \phi^{des} \cos \psi_0 ) \\ 
+\frac{1}{m}u_1 - g
+\end{matrix}
+\end{equation}
+
+We can form a PD controller by scaling the vector of accelerations by the error that is proportional to and derivative of the state $x$:
+
+
+\begin{equation}
+\ddot r^{des} = k_d(\dot r_T - \dot r) + k_d(\dot r_T - \dot r) + \ddot r_T
+\end{equation}
+
+where the subscript T represents 'trajectory', which for the case of hover is simply 0, for the original state. Thrust, the first control output, was found in grams of thrust, as opposed to newtons as in phase 2. Given that, we were able to find desired accelerations in all 3 degrees of freedom, and the desired Euler angles.
+
+It was decided that for simplicity to keep $\psi_{des}=0$ at all times. Unlike in phase 2 where the desired moments in all three rotational DOF were the second, third, and four control output, in phase 4 the control output is in the form of
+$ \langle \, thrust~ \, roll~ \, pitch~ \, yaw~ \rangle_{desired}$.
+Given this information, and equations (3) and (4), we find the remaining 3 control output to be: 
+
+\begin{equation}
+u_1 =(\ddot r^{des}_3 \frac{m}{g}+ m)1000
+\end{equation}
+\begin{equation}
+u_2 = \phi^{des} = \frac{1}{g}(\ddot r^{des}_1 \cos \psi_0 + \ddot r^{des}_2 \sin \psi_0 )
+\end{equation}
+\begin{equation}
+u_3 = \theta^{des} = \frac{1}{g}(\ddot r^{des}_1 \sin \psi_0 + \ddot r^{des}_2 \cos \psi_0 )
+\end{equation}
+\\
+
+\subsection{Trajectory Generator}
+In actual flying of a quadrotor, we cannot change the velocity suddenly, because the path is not smooth. Functions like sinusoids and polynomials are smooth with continuous derivative. Here, we use a quintic polynomial method as discussed below to generate trajectory.\\
+
+$x(t)$ is a polynomial from $t = 0$ to $t = T$. We have six known variables here,\\
+\[x(0) = x_0, \dot x (0) = \dot x_0, \ddot x(0) = \ddot x_0\]
+\[x(T) = x_T, \dot x (T) = \dot x_T, \ddot x(T) = \ddot x_T\]
+Hence, we need a representation of $x(t)$ with six unknown coefficients in order to construct an unique answer of $x(t)$. We can write as:
+\[x(t)=At^5+Bt^4+Ct^3+Dt^2+Et+F =
+\begin{bmatrix}
+t^5 & t^4 & t^3 & t^2 &t & 1
+\end{bmatrix}
+\begin{bmatrix}
+A\\B\\C\\D\\E\\F
+\end{bmatrix}
+\]
+We also can write
+\[\dot x(t)=5At^4+4Bt^3+3Ct^2+2Dt+E\]
+\[\ddot x(t)=20At^3+12Bt^2+6Ct+2D\]
+Plugging in the value of $x(t),\dot x(t), \ddot x(t)$ at time $t = 0, t= T$, we can have:
+\[
+\begin{bmatrix}
+x_0\\x_T\\\dot x_0\\\dot x_T\\ \ddot x_0\\ \ddot x_T
+\end{bmatrix}=
+\begin{bmatrix}
+0     &    0  &   0  &   0 & 0 & 1\\
+T^5   &  T^4  & T^3  & T^2 & T & 1\\
+0     &    0  &   0  &   0 & 1 & 0\\
+5T^4  &  4T^3 & 3T^2 &  2T & 1 & 0\\
+0     &    0  &   0  &   1 & 0 & 0\\
+20T^3 & 12T^2 &  6T  &   2 & 0 & 0\\
+\end{bmatrix}
+\begin{bmatrix}
+A\\B\\C\\D\\E\\F
+\end{bmatrix}
+\]\\
+
+It is easy to find that the six-by-six matrix is invertible, so we can solve the six coefficients to represent $x(t)$ as a polynomial. For any time between $[0, T]$, there are always unique $x(t),\dot x(t), \ddot x(t)$, which change smoothly. And the $x(t),\dot x(t), \ddot x(t)$ are also used in the controller.\\
+
+In this phase, there is no obstacle and the map is empty. Hence, we only have to put each point in \texttt{example\_waypts}  as the start and the end of each small fraction in the whole trajectory. 

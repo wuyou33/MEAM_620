@@ -1,0 +1,89 @@
+close all;
+clear all;
+clc;
+addpath('./utils','./readonly','./phase1','./phase2');
+
+global MapData traj
+
+%% Map1
+% Plan path
+disp('Planning ...');
+map = load_map('maps/map1.txt', 0.1, 2.0, 0.3);
+start = [0.0  -4.9 0.2];
+stop  = [8.0  18.0 3.0];
+% MapData.goal=stop;
+% MapData.start=start;
+% load map1path.mat
+
+path = dijkstra(map, start, stop);
+save map1path.mat path;
+
+
+% Additional init script
+init_script;
+
+% Run trajectory
+trajectory = run_trajectory_readonly(start, stop, map, path);
+
+%% Map2
+
+% Plan path
+disp('Planning ...');
+map = load_map('maps/map2.txt', 0.1, 2.0, 0.3);
+start = [5 1 1];
+stop  = [5 29 1];
+% MapData.goal=stop;
+% MapData.start=start;
+% load map2path.mat
+
+path = dijkstra(map, start, stop, 'true');
+save map2path.mat path;
+
+
+% Additional init script
+init_script;
+
+% Run trajectory
+trajectory = run_trajectory_readonly(start, stop, map, path);
+
+%% Map3
+
+% Plan path
+disp('Planning ...');
+map = load_map('maps/map3.txt', 0.1, 1.0, 0.3);
+start = [0.5 2.5 5.5];
+stop  = [19.0 2.5 5.5];
+% MapData.goal=stop;
+% MapData.start=start;
+% load map3path.mat
+
+path = dijkstra(map, start, stop);
+save map3path.mat path;
+
+
+% Additional init script
+init_script;
+
+% Run trajectory
+trajectory = run_trajectory_readonly(start, stop, map, path);
+
+%% Map4
+
+% Plan path
+disp('Planning ...');
+map = load_map('maps/map4.txt', 0.1, 1, 0.1);
+start = [1 5 1.5];
+stop = [9 7 1.5];
+% MapData.goal=stop;
+% MapData.start=start;
+% load map4path.mat
+
+path = dijkstra(map, start, stop,'true');
+save map4path.mat path;
+
+
+% Additional init script
+init_script;
+
+% Run trajectory
+trajectory = run_trajectory_readonly(start, stop, map, path);

@@ -1,0 +1,27 @@
+\section{Codes}
+
+Because the PD controller for the desired angles and thrust was dependent on the assumption of a near-hover state, the controller was very similar for all three controllers. 
+Proportional gains of 20 and derivative gains of 5 were found to be well suited for movements as docile as hover to flying at aggressive speeds between multiple way points (see Section: Results for more on this).  
+To set up each controller, a time \verb!t_start = GetUnixtime! was declared as the beginning of the time the controller was running. Additionally, a gravity constant was declared, as well as a constant quadrotor mass of 0.220 kg, which is heavier than 0.178 kg, the mass given in phases 2 and 3. 
+
+\subsection{Hover Codes}
+
+The current values  of yaw, position, and velocity were pulled from the \verb!qd! cell array, and the gain values $k_p$ and $k_d$ were set as $1 \times 3$ vectors. Using a vectorized implementation of (5) above, the desire linear accelerations were found. The trust was found to be  
+\begin{equation*}
+F = 1000((acc_{des}(3)+1) \frac{m}{g}).
+\end{equation*}
+The desired roll and pitch were exactly as the are shown in (6), dependent on the current yaw $\psi$,  and the desired yaw was always set to 0; 
+
+
+\subsection{Single Waypoint Codes}
+
+In the single way point code, the execution is largely the same, but the setup is quite different. In the sequence message code an end point is specified, which is then read in to the controller code in its first iteration. This end point is then used by the trajectory generator (see Section 1.2), assuming current position in the first iteration is the starting point, to find a smooth trajectory to that location. 
+After this, the trajectory generator is called each iteration, returning the planned desired position, velocity, acceleration, and total time for the trajectory. If the current time exceeds the planned trajectory time, the quadrotor is commanded into a hover state. Otherwise, it follows its trajectory as intended, finding the desired command accelerations as a function of the difference between the planned state and the current state:
+\begin{equation*}
+acc_{des} = kp_1 (r_T- r) + kd_1(\dot r_T -\dot r)  + acc_T;
+\end{equation*}
+where $x_t, \dot x_t,$ and $\ddot x_t$ are the planned position, velocity, and acceleration. Beyond this, the controller functions the same as the hover controller.
+
+\subsection{Multi Waypoint Codes}
+
+The multi-waypoint controller functions the same as the single way point controller with the exception of one aspect; instead of specifying just an end point in the sequence message, a series of endpoints are specified. The trajectory planner finds a smooth path between, and including, all of these points, and then the controller behaves the same as for one waypoint.

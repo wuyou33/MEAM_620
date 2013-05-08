@@ -1,0 +1,44 @@
+function [pos phi phi_d vel acc vects] = circle(t)
+
+%You fill this in!
+
+speed = 0.1; % time cost from start to goal is 1/speed
+
+theta = 2 * pi * t * speed;
+
+x = 5 * cos(theta);
+y = 5 * sin(theta);
+z = 2.5 * t * speed;
+
+% z = 0;
+
+% phi = 2 * pi * speed * t + pi / 2;
+phi = 0;
+
+x_d = -5 * sin(theta) * 2 * pi * speed;
+y_d = 5 * cos(theta) * 2 * pi * speed;
+z_d = 2.5 * speed;
+
+% z_d = 0;
+
+phi_d = 2 * pi * speed;
+
+x_dd = -5 * cos(theta) * (2 * pi * speed)^2;
+y_dd = -5 * sin(theta) * (2 * pi * speed)^2;
+z_dd = 0;
+phi_d = 0;
+
+pos = [x, y, z];
+vel = [x_d, y_d, z_d];
+acc = [x_dd, y_dd, z_dd];
+
+vect_t = vel / norm(vel);
+vect_n = acc / norm(acc);
+vect_b = cross(vect_t, vect_n);
+vects = [vect_t; vect_n; vect_b];
+
+% hold on;
+% plot3(x, y, z, 'r*-');
+% hold off;
+
+end

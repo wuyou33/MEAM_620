@@ -1,0 +1,63 @@
+% This script starts up the initialization for bonus EKF.
+
+% Written by Qiong Wang for MEAM 620 at the University of Pennsylvania.
+% April 18th, 2013
+if ~exist('g')
+    grav = 9.81;
+    syms ax ay az x y z phi theta psi xd yd zd wx wy wz;
+    syms sax say saz swx swy swz sbax sbay sbaz dt; % nx ny nz nphi ntheta npsi
+    syms bax bay baz bphi btheta real;
+    
+    X = [x; y; z; xd; yd; zd; phi; theta; psi;...
+        bax; bay; baz; bphi; btheta];                    % State/Pose
+    U = [ax; ay; az; wx; wy; wz];                         % Control/Process input
+    S = [sax; say; saz; swx; swy; swz; sbax; sbay; sbaz]; % Process noise
+    % D = [nx; ny; nz; nphi; ntheta; npsi];                 % Measurement noise
+    Rot = RPY2Rot(phi, theta, psi);                       % Rotation matrix
+    Xdd = Rot * (U(1:3) - X(10:12) - S(1:3)) - [0; 0; grav];          % Second Derivative
+    % X(4:6) = Xdd .* dt;
+    
+    % Process
+    g = [X(1:3) + X(4:6).* dt + Xdd.* dt^2/2;
+        X(4:6) + Xdd.* dt;
+        Rot2RPY(Rot*RPY2Rot((wx + swx)*dt, (wy + swy)*dt, (wz + swz)*dt))';
+        X(10:12) +  S(1:3).* dt;
+        X(13:14)];
+    
+    % Measurement
+    h = [x; y; z; phi; theta; psi] + [0; 0; 0; bphi; btheta; 0];
+    % Jacobians
+    g = simplify(g);
+    GJ = jacobian(g, X);
+    LJ = jacobian(g, S);
+    HJ = jacobian(h, X);
+    
+    g = matlabFunction(g);
+    GJ = matlabFunction(GJ);
+    LJ = matlabFunction(LJ);
+    h = matlabFunction(h);
+    Xdd = matlabFunction(Xdd);
+end
+
+xd = 0;
+yd = 0;
+zd = 0;
+
+
+% True state
+X = [0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0];
+% True const process update
+U = [1; 1; 1; pi/10; pi/10; pi/10];
+
+% Estimated state
+Xest = [Xest_init(1:3)'; 0; 0; 0; Xest_init(4:6)'; X(10:14)]; % 14 by 1
+% Noisy process update
+Uest = [0; 0; 0; 0; 0; 0];  % 6 by 1
+% Noisy measurement
+Zest = [0; 0; 0; 0; 0; 0];
+% State covariance
+P = diag([0.02 0.02 0.02 0.02 0.02 0.02 0.02 0.02 0.02 0.02 0.02 0.02 0.02 0.02]);  % 14 by 14
+% Process covariance
+R = diag([0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]);    % 9 by 9
+% Measurement covariance
+Q = diag([1 1 0.1 0.3 0.3 0.3]);

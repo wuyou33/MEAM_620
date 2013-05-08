@@ -1,0 +1,240 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>run_trajectory_readonly</title><meta name="generator" content="MATLAB 7.13"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2013-02-07"><meta name="DC.source" content="run_trajectory_readonly.m"><style type="text/css">
+
+body {
+  background-color: white;
+  margin:10px;
+}
+
+h1 {
+  color: #990000; 
+  font-size: x-large;
+}
+
+h2 {
+  color: #990000;
+  font-size: medium;
+}
+
+/* Make the text shrink to fit narrow windows, but not stretch too far in 
+wide windows. */ 
+p,h1,h2,div.content div {
+  max-width: 600px;
+  /* Hack for IE6 */
+  width: auto !important; width: 600px;
+}
+
+pre.codeinput {
+  background: #EEEEEE;
+  padding: 10px;
+}
+@media print {
+  pre.codeinput {word-wrap:break-word; width:100%;}
+} 
+
+span.keyword {color: #0000FF}
+span.comment {color: #228B22}
+span.string {color: #A020F0}
+span.untermstring {color: #B20000}
+span.syscmd {color: #B28C00}
+
+pre.codeoutput {
+  color: #666666;
+  padding: 10px;
+}
+
+pre.error {
+  color: red;
+}
+
+p.footer {
+  text-align: right;
+  font-size: xx-small;
+  font-weight: lighter;
+  font-style: italic;
+  color: gray;
+}
+
+  </style></head><body><div class="content"><pre class="codeinput"><span class="keyword">function</span> trajectory = run_trajectory_readonly(start, stop, map, path, vis)
+
+<span class="comment">% Maximum position error of the quadrotor at goal</span>
+pos_tol  = 0.05; <span class="comment">% m</span>
+<span class="comment">% Maximum speed of the quadrotor at goal</span>
+vel_tol  = 0.05; <span class="comment">% m/s</span>
+<span class="comment">% Maximum time that the quadrotor is allowed to fly</span>
+time_tol = 180;  <span class="comment">% s</span>
+<span class="comment">% Quadrotor model</span>
+<span class="keyword">global</span> params;
+params = nanoplus_readonly();<span class="comment">%hummingbird_readonly();</span>
+
+<span class="comment">% Environment figure</span>
+<span class="keyword">if</span> nargin &lt; 5
+    vis = true;
+<span class="keyword">end</span>;
+<span class="keyword">if</span> vis
+    h = figure;
+    set(gcf,<span class="string">'Renderer'</span>,<span class="string">'OpenGL'</span>);
+    plot_path(map, path);
+    drawnow;
+<span class="keyword">end</span>;
+
+<span class="comment">% Initialize simulation</span>
+disp(<span class="string">'Init Simulation ...'</span>);
+x0     = zeros(13,1);
+phi0   = 0.0;
+theta0 = 0.0;
+psi0   = 0.0;
+Rot0   = RPYtoRot_ZXY(phi0,theta0,psi0);
+Quat0  = RotToQuat(Rot0);
+x0(1)  = start(1); <span class="comment">%x</span>
+x0(2)  = start(2); <span class="comment">%y</span>
+x0(3)  = start(3); <span class="comment">%z</span>
+x0(4)  = 0;        <span class="comment">%xdot</span>
+x0(5)  = 0;        <span class="comment">%ydot</span>
+x0(6)  = 0;        <span class="comment">%zdot</span>
+x0(7)  = Quat0(1); <span class="comment">%qw</span>
+x0(8)  = Quat0(2); <span class="comment">%qx</span>
+x0(9)  = Quat0(3); <span class="comment">%qy</span>
+x0(10) = Quat0(4); <span class="comment">%qz</span>
+x0(11) = 0;        <span class="comment">%p</span>
+x0(12) = 0;        <span class="comment">%q</span>
+x0(13) = 0;        <span class="comment">%r</span>
+tstep  = 0.01;     <span class="comment">% this determines the time step at which the solution is given</span>
+vstep  = 0.05;     <span class="comment">% visualization interval</span>
+time   = 0;        <span class="comment">% current time</span>
+x      = x0;       <span class="comment">% state</span>
+trajectory = zeros(time_tol / tstep, 13);
+sample_cnt = 1;
+
+<span class="comment">% Start Simulation</span>
+disp(<span class="string">'Start Simulation ...'</span>);
+<span class="keyword">while</span> (1)
+
+    <span class="comment">% Run simulation for vstep</span>
+    timeint = time:tstep:time+vstep;
+    [tsave,xsave] = ode45(@(t,s) quadEOM_readonly(t,s), timeint', x);
+    x    = xsave(end,:)';
+    time = time + vstep;
+
+    <span class="comment">% Save trajectory</span>
+    trajectory(sample_cnt:sample_cnt+4,:) = xsave(1:5,:);
+    sample_cnt = sample_cnt + 5;
+
+    <span class="comment">% Termination criteria</span>
+    <span class="keyword">if</span> (norm(x(1:3) - stop') &lt; pos_tol &amp;&amp; norm(x(4:6)) &lt; vel_tol) || time &gt;= time_tol
+        trajectory(sample_cnt,:) = xsave(end,:);
+        <span class="keyword">break</span>;
+    <span class="keyword">end</span>;
+
+    <span class="comment">% Rlot Results</span>
+    <span class="keyword">if</span> vis
+        figure(h);
+        hold <span class="string">on</span>;
+        plot3(x(1),x(2),x(3),<span class="string">'b.'</span>,<span class="string">'Markersize'</span>,10);
+        hold <span class="string">off</span>;
+        drawnow;
+    <span class="keyword">end</span>;
+
+<span class="keyword">end</span>;
+
+<span class="comment">% Cut trajectory to appropriate length</span>
+trajectory = trajectory(1:sample_cnt,:);
+</pre><pre class="codeoutput">Error using run_trajectory_readonly (line 20)
+Not enough input arguments.
+</pre><p class="footer"><br>
+      Published with MATLAB&reg; 7.13<br></p></div><!--
+##### SOURCE BEGIN #####
+function trajectory = run_trajectory_readonly(start, stop, map, path, vis)
+
+% Maximum position error of the quadrotor at goal
+pos_tol  = 0.05; % m
+% Maximum speed of the quadrotor at goal
+vel_tol  = 0.05; % m/s
+% Maximum time that the quadrotor is allowed to fly
+time_tol = 180;  % s
+% Quadrotor model
+global params;
+params = nanoplus_readonly();%hummingbird_readonly(); 
+
+% Environment figure
+if nargin < 5
+    vis = true;
+end;
+if vis
+    h = figure;
+    set(gcf,'Renderer','OpenGL');
+    plot_path(map, path);
+    drawnow;
+end;
+
+% Initialize simulation
+disp('Init Simulation ...');
+x0     = zeros(13,1);
+phi0   = 0.0; 
+theta0 = 0.0; 
+psi0   = 0.0;
+Rot0   = RPYtoRot_ZXY(phi0,theta0,psi0);
+Quat0  = RotToQuat(Rot0);
+x0(1)  = start(1); %x
+x0(2)  = start(2); %y
+x0(3)  = start(3); %z
+x0(4)  = 0;        %xdot
+x0(5)  = 0;        %ydot
+x0(6)  = 0;        %zdot
+x0(7)  = Quat0(1); %qw
+x0(8)  = Quat0(2); %qx
+x0(9)  = Quat0(3); %qy
+x0(10) = Quat0(4); %qz
+x0(11) = 0;        %p
+x0(12) = 0;        %q
+x0(13) = 0;        %r
+tstep  = 0.01;     % this determines the time step at which the solution is given
+vstep  = 0.05;     % visualization interval
+time   = 0;        % current time
+x      = x0;       % state
+trajectory = zeros(time_tol / tstep, 13);
+sample_cnt = 1;
+
+% Start Simulation 
+disp('Start Simulation ...');
+while (1)
+    
+    % Run simulation for vstep
+    timeint = time:tstep:time+vstep;
+    [tsave,xsave] = ode45(@(t,s) quadEOM_readonly(t,s), timeint', x);
+    x    = xsave(end,:)';
+    time = time + vstep;    
+
+    % Save trajectory
+    trajectory(sample_cnt:sample_cnt+4,:) = xsave(1:5,:);
+    sample_cnt = sample_cnt + 5;
+
+    % Termination criteria
+    if (norm(x(1:3) - stop') < pos_tol && norm(x(4:6)) < vel_tol) || time >= time_tol
+        trajectory(sample_cnt,:) = xsave(end,:);
+        break;
+    end;
+    
+    % Rlot Results
+    if vis
+        figure(h);
+        hold on;
+        plot3(x(1),x(2),x(3),'b.','Markersize',10);
+        hold off;
+        drawnow;
+    end;
+
+end;
+
+% Cut trajectory to appropriate length
+trajectory = trajectory(1:sample_cnt,:);
+
+##### SOURCE END #####
+--></body></html>

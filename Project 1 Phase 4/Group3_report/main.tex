@@ -1,0 +1,42 @@
+\documentclass[10pt]{article}
+%================================= Packages =========================%
+\usepackage{fullpage}
+\usepackage[letterpaper]{geometry}
+\geometry{verbose,tmargin=1in,bmargin=1in,lmargin=1in,rmargin=1in}
+\usepackage{graphicx}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{latexsym}
+\usepackage{enumerate}
+\usepackage[urlcolor=blue,colorlinks=true]{hyperref}
+\usepackage[utf8]{inputenc}
+\usepackage{natbib}
+\usepackage[framed,numbered,autolinebreaks,useliterate]{mcode}
+
+\def\mathbi#1{\textbf{\em #1}}
+\newcommand{\la}{\lambda}
+\newcommand{\de}{\delta}
+\newcommand{\tr}{\mbox{tr}}
+
+\title{\bfseries MEAM 620, Advanced Robotics, Spring 2013:\\ Project 1 Phase 4}
+\author{Group 3: Johnathan Balloch,Jialue Huang, Qiong Wang}
+\date{March 25, 2013}
+
+\begin{document}
+
+\maketitle
+
+
+% Problem 1
+\input{Analysis.tex}
+
+% Results.
+\input{Codes.tex}
+
+% Codes part.
+\input{Results.tex}
+
+\bibliographystyle{plain}
+\bibliography{references}
+\end{document}

@@ -1,0 +1,4 @@
+No collision
+Goal Reached, d:  0.011186
+Optimal Path Length:  32.8563  Trajectory Length:  35.5202  Diff:  2.6639
+Time:  15.76

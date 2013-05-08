@@ -1,0 +1,31 @@
+function [C] = collide(map, points)
+% COLLIDE Test whether points collide with an obstacle in an environment.
+%   C = collide(map, points).  points is an M-by-3 matrix where each
+%   row is an (x, y, z) point.  C in an M-by-1 logical vector; 
+%   C(i) = 1 if M(i, :) touches an obstacle and is 0 otherwise.
+
+point = ones(size(map{1}, 1), 1);
+xy_res = map{2}(1);
+z_res = map{2}(2);
+x_size = map{2}(4);
+z_size = map{2}(5);
+x_min = map{2}(6);
+y_min = map{2}(7);
+z_min = map{2}(8);
+C = zeros(size(points, 1), 1);
+for i = 1: size(points, 1)
+%     x1 = bsxfun(@ge, points(i, 1) * point, map(:, 1));
+%     x2 = bsxfun(@le, points(i, 1) * point, map(:, 1));
+%     y1 = bsxfun(@ge, points(i, 2) * point, map(:, 2));
+%     y2 = bsxfun(@le, points(i, 2) * point, map(:, 2));
+%     z1 = bsxfun(@ge, points(i, 3) * point, map(:, 3));
+%     z2 = bsxfun(@le, points(i, 3) * point, map(:, 3));
+%     result = x1 & x2 & y1 & y2 & z1 & z2;
+%     C(i) = map(find(result, 1), 4);
+    x_index = floor((points(i, 1) - x_min) / xy_res);
+    y_index = floor((points(i, 2) - y_min) / xy_res);
+    z_index = floor((points(i, 3) - z_min) / z_res);
+    index = y_index + x_index * x_size + z_index * z_size + 1;
+    C(i) = map{1}(index, 4);
+end
+end

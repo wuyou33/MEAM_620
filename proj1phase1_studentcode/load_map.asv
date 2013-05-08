@@ -1,0 +1,87 @@
+function map = load_map(filename, xy_res, z_res, margin)
+% LOAD_MAP Load a map from disk.
+%  MAP = LOAD_MAP(filename, xy_res, z_res, margin).  Creates an occupancy grid
+%  map where a node is considered fill if it lies within 'margin' distance of
+%  on abstacle.
+
+% Import the data of the boundary
+boundary_data = importdata(filename);
+boundary = boundary_data.data(1, :);
+
+% Mesh
+boundary_max = [boundary(4), boundary(5), boundary(6)];
+boundary_min = [boundary(1), boundary(2), boundary(3)];
+[x, y, z] = meshgrid(boundary_min(1): xy_res: boundary_max(1), boundary_min(2): xy_res: boundary_max(2), boundary_min(3): z_res: boundary_max(3));
+
+% Deal with the blocks
+blocks_data = importdata(filename, ' ', 1);
+if isstruct(blocks_data)
+    blocks = blocks_data.data;
+    blocks_num = ones(size(blocks, 1), 1);
+
+    blocks_min = [blocks(:, 1) - margin * blocks_num, blocks(:, 2) - margin * blocks_num, blocks(:, 3) - margin * blocks_num];
+    blocks_max = [blocks(:, 4) + margin * blocks_num, blocks(:, 5) + margin * blocks_num, blocks(:, 6) + margin * blocks_num];
+    
+    
+
+    result = zeros(size(x));
+    last_result = zeros(size(x));
+
+    for i = 1 : size(blocks, 1)
+%         x_max = bsxfun(@le, x, blocks_max(i, 1)*ones(size(x)));
+%         x_min = bsxfun(@ge, x, blocks_min(i, 1)*ones(size(x)));
+%         y_max = bsxfun(@le, y, blocks_max(i, 2)*ones(size(y)));
+%         y_min = bsxfun(@ge, y, blocks_min(i, 2)*ones(size(y)));
+%         z_max = bsxfun(@le, z, blocks_max(i, 3)*ones(size(z)));
+%         z_min = bsxfun(@ge, z, blocks_min(i, 3)*ones(size(z)));
+%         result = x_max & x_min & y_max & y_min & z_max & z_min;
+        
+        i1 = find(bsxfun(@lt, blocks_min(i, :), boundary_min) == 1);
+        i2 = find(bsxfun(@gt, blocks_max(i, :), boundary_max) == 1);
+        blocks_min(i1) = boundary_min(i1);
+        blocks_max(i2) = boundary_max(i2);
+        
+        x_index_min = floor((blocks_min(i, 1) - boundary_min(1)) / xy_res) + 1;
+        y_index_min = floor((blocks_min(i, 2) - boundary_min(2)) / xy_res) + 1;
+        z_index_min = floor((blocks_min(i, 3) - boundary_min(3)) / z_res) + 1;
+        
+        x_index_max = ceil((blocks_max(i, 1) - boundary_min(1)) / xy_res);
+        y_index_max = ceil((blocks_max(i, 2) - boundary_min(2)) / xy_res);
+        z_index_max = ceil((blocks_max(i, 3) - boundary_min(3)) / z_res);
+        
+        result(y_index_min: y_index_max, x_index_min: x_index_max, z_index_min: z_index_max) = 1;
+
+%         x_index_min = floor((blocks_min(1) - boundary_min(1)) / xy_res);
+%         y_index_min = floor((blocks_min(2) - boundary_min(2)) / xy_res);
+%         z_index_min = floor((blocks_min(3) - boundary_min(3)) / z_res);
+%         
+%         x_index_max = floor((blocks_max(1) - boundary_min(1)) / xy_res);
+%         y_index_max = floor((blocks_max(2) - boundary_min(2)) / xy_res);
+%         z_index_max = floor((blocks_max(3) - boundary_min(3)) / z_res);
+% 
+%         index_min = y_index_min + x_index_min * size(x, 2) + z_index_min * size(x, 3) + 1;
+        
+        h = patch(isosurface(x, y, z, result));
+        h1 = patch(isocaps(x, y, z, result));
+        set(h, 'EdgeColor', blocks(i, 7:9)./255);
+        set(h1, 'EdgeColor', blocks(i, 7:9)./255);
+
+%         result = last_result | result;
+%         last_result = result;
+    end
+else
+    result = zeros(size(x)); 
+end
+
+% Reshape the matrice for output
+x = x(:);
+y = y(:);
+z = z(:);
+occupied = result(:);
+
+map{1} = [x, y, z, occupied];
+map{2} = [xy_res, z_res, size(result), boundary_min];
+% View
+view(3)
+% axis([boundary_min(1) boundary_max(1) boundary_min(2) boundary_max(2) boundary_min(3) boundary_max(3)])
+end
